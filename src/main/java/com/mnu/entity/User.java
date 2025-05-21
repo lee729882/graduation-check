@@ -1,0 +1,29 @@
+package com.mnu.entity;
+
+import jakarta.persistence.*;     // JPA 관련 import
+import lombok.*;                 // Lombok 관련 import
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Entity
+@Table(name = "\"users\"")
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String username;
+
+    @Column(nullable = false)
+    private String password;
+
+    @Column(nullable = false)
+    private String school;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+}

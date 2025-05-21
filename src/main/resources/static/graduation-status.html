@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>졸업 요건 확인</title>
+</head>
+<body>
+    <h1>졸업 요건 확인 결과</h1>
+
+    <h2>이수 학점</h2>
+    <ul>
+        <li th:each="credit : ${result.credits}">
+            <span th:text="${credit[0]}">영역</span>: 
+            <span th:text="${credit[1]}">학점</span>
+        </li>
+    </ul>
+
+    <h2>미이수 필수 과목</h2>
+    <ul>
+        <li th:each="course : ${result.missingRequiredCourses}" th:text="${course.courseName}">과목명</li>
+    </ul>
+
+    <h2>비교과 프로그램</h2>
+    <ul>
+        <li th:each="program : ${result.nonCurricular}">
+            <span th:text="${program[0]}">프로그램명</span>: 
+            <span th:text="${program[1]}">이수 여부</span>
+        </li>
+    </ul>
+</body>
+</html>
