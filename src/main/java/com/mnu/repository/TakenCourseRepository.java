@@ -14,4 +14,6 @@ public interface TakenCourseRepository extends JpaRepository<TakenCourse, Long> 
            "WHERE tc.studentId = :studentId AND tc.completed = 'Y' " +
            "GROUP BY c.category")
     List<Object[]> sumCreditsByCategory(@Param("studentId") String studentId);
+    List<TakenCourse> findByStudentId(String studentId);
+
 }

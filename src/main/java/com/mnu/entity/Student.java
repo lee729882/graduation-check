@@ -12,7 +12,7 @@ public class Student {
 
     @Id
     private String studentId;
-
+    private String email;
     private String name;
     private String major;
     private int admissionYear;

@@ -88,7 +88,7 @@
 <body>
   <div class="container">
     <h2>LOGIN</h2>
-    <form id="loginForm">
+    <form action="/login" method="POST">
       <div class="form-group">
         <label for="username">아이디:</label>
         <input type="text" id="username" name="username" placeholder="아이디" required />
@@ -106,27 +106,5 @@
       <a href="find-password.html">비밀번호 찾기</a>
     </div>
   </div>
-
-<script>
-  document.getElementById("loginForm").onsubmit = async function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    const data = Object.fromEntries(formData);
-    const response = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
-
-    const result = await response.text();
-    if (response.ok) {
-      location.href = result;  // "/graduation-status.html"로 이동
-    } else {
-      alert(result);
-    }
-
-  };
-</script>
-
 </body>
 </html>

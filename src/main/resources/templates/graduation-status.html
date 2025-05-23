@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>🎓 졸업 요건 확인 결과</title>
+</head>
+<body>
+    <h1>🎓 졸업 요건 확인 결과</h1>
+
+    <h2>📚 이수 학점</h2>
+    <div th:if="${#lists.isEmpty(credits)}">
+        ⚠️ 이수 과목이 없습니다.
+    </div>
+    <ul th:unless="${#lists.isEmpty(credits)}">
+        <li th:each="credit : ${credits}" 
+            th:text="${credit.category + ' : ' + credit.totalCredits + '학점'}"></li>
+    </ul>
+
+    <h2>❗ 미이수 전공 필수 과목</h2>
+    <div th:if="${#lists.isEmpty(missingRequiredCourses)}">
+        없음
+    </div>
+    <ul th:unless="${#lists.isEmpty(missingRequiredCourses)}">
+        <li th:each="course : ${missingRequiredCourses}"
+            th:text="${course.courseName + ' (' + course.courseCode + ')'}"></li>
+    </ul>
+
+    <h2>🎯 비교과 프로그램 이수 현황</h2>
+    <div th:if="${#lists.isEmpty(nonCurricular)}">
+        정보 없음
+    </div>
+    <ul th:unless="${#lists.isEmpty(nonCurricular)}">
+        <li th:each="program : ${nonCurricular}">
+            <span th:text="${program[0]}"></span> :
+            <span th:text="${program[1]}"></span>
+        </li>
+    </ul>
+
+    <h2>🗓️ 학기별 이수 과목</h2>
+    <div th:if="${#maps.isEmpty(takenBySemester)}">
+        ⚠️ 이수 과목이 없습니다.
+    </div>
+    <div th:each="entry : ${takenBySemester}">
+        <h3 th:text="${entry.key}">학기</h3>
+        <ul>
+            <li th:each="course : ${entry.value}">
+                <span th:text="${course.courseCode}">CS101</span> -
+                <span th:text="${course.courseName}">과목명</span> -
+                <span th:text="${course.grade}">A+</span>
+            </li>
+        </ul>
+    </div>
+</body>
+</html>

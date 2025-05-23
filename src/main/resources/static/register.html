@@ -75,16 +75,29 @@
 <body>
   <div class="container">
     <h2>회원가입</h2>
-    <form id="registerForm">
+	<form id="registerForm" enctype="multipart/form-data">
       <div class="form-group">
-        <label for="school">학교 선택:</label>
-        <select id="school" name="school" required>
-          <option value="">학교 선택</option>
-          <option value="목포대학교">목포대학교</option>
-          <option value="전남대학교">전남대학교</option>
-          <option value="순천대학교">순천대학교</option>
-        </select>
-      </div>
+    <label for="major">전공 선택:</label>
+    <select id="major" name="major" required>
+      <option value="">전공 선택</option>
+      <option value="컴퓨터공학과">컴퓨터공학과</option>
+      <option value="전자공학과">전자공학과</option>
+      <option value="기계공학과">기계공학과</option>
+      <option value="산업경영공학과">산업경영공학과</option>
+      <option value="화학공학과">화학공학과</option>
+      <!-- 필요 시 추가 가능 -->
+    </select>
+  </div>
+<div class="form-group">
+  <label for="admissionYear">입학년도:</label>
+  <select id="admissionYear" name="admissionYear" required>
+    <option value="">입학년도 선택</option>
+    <option value="2021">2021</option>
+    <option value="2022">2022</option>
+    <option value="2023">2023</option>
+    <option value="2024">2024</option>
+  </select>
+</div>
 
       <div class="form-group">
         <label for="username">아이디:</label>
@@ -101,27 +114,51 @@
         <input type="email" id="email" name="email" placeholder="이메일" required />
       </div>
 
+		<div class="form-group">
+		  <label for="gradePdf">성적 PDF 업로드:</label>
+		  <input type="file" id="gradePdf" name="gradePdf" accept="application/pdf" required />
+		</div>
       <button type="submit" class="btn-submit">회원가입</button>
     </form>
+    
   </div>
 
-  <script>
-    document.getElementById("registerForm").onsubmit = async function(e) {
-      e.preventDefault();
-      const formData = new FormData(this);
-      const data = Object.fromEntries(formData);
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
+<script>
+  function showCustomAlert(message, redirectUrl = null) {
+    document.getElementById("customAlertMessage").innerText = message;
+    document.getElementById("customAlert").style.display = "block";
+    if (redirectUrl) {
+      setTimeout(() => {
+        location.href = redirectUrl;
+      }, 2000); // 2초 후 이동
+    }
+  }
 
-      const result = await response.text();
-      alert(result);
-      if (response.ok) {
-        location.href = "/login.html";
-      }
-    };
-  </script>
+  function hideCustomAlert() {
+    document.getElementById("customAlert").style.display = "none";
+  }
+
+  document.getElementById("registerForm").onsubmit = async function(e) {
+	  e.preventDefault();
+	  const form = document.getElementById("registerForm");
+	  const formData = new FormData(form);
+
+	  const response = await fetch("/api/register", {
+	    method: "POST",
+	    body: formData
+	  });
+
+	  if (response.ok) {
+	    const result = await response.json();  // 👈 JSON으로 파싱
+	    alert(result.message);  // 👈 "회원가입 완료 및 성적 분석 완료" 만 뜸
+	    location.href = result.redirectUrl;  // 👈 "/login" 으로 이동
+	  } else {
+	    const errorText = await response.text();
+	    alert("회원가입 실패: " + errorText);
+	  }
+	};
+
+</script>
+
 </body>
 </html>
