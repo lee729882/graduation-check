@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import com.mnu.dto.GraduationStatusDTO;
 
 import java.util.Map;
 
@@ -19,15 +20,15 @@ public class GraduationController {
     // HTML 페이지 반환
     @GetMapping("/status/{studentId}")
     public String getStatus(@PathVariable String studentId, Model model) {
-        Map<String, Object> result = graduationCheckService.checkStatus(studentId);
+        GraduationStatusDTO status = graduationCheckService.checkStatus(studentId);
 
-        System.out.println("==== Controller에서 받은 result ====");
-        result.forEach((k, v) -> System.out.println(k + " : " + v));
+        // (선택) 디버깅 로그
+        System.out.println("== GraduationStatusDTO ==");
+        System.out.println("전공필수 이수학점: " + status.getMajorRequiredCredits());
+        System.out.println("미이수 전공필수 과목 수: " + status.getMissingRequiredCourses().size());
 
-        model.addAttribute("credits", result.get("credits"));
-        model.addAttribute("missingRequiredCourses", result.get("missingRequiredCourses"));
-        model.addAttribute("nonCurricular", result.get("nonCurricular"));
-        model.addAttribute("takenBySemester", result.get("takenBySemester"));
+        // 한 번에 통째로 넘기기
+        model.addAttribute("status", status);
 
         return "graduation-status";
     }
@@ -35,9 +36,10 @@ public class GraduationController {
 
     // JSON API 응답
     @GetMapping("/status-json/{studentId}")
-    public ResponseEntity<Map<String, Object>> getStatusJson(@PathVariable String studentId) {
-        Map<String, Object> result = graduationCheckService.checkStatus(studentId);
-        return ResponseEntity.ok(result);
+    public ResponseEntity<GraduationStatusDTO> getStatusJson(@PathVariable String studentId) {
+        GraduationStatusDTO status = graduationCheckService.checkStatus(studentId);
+        return ResponseEntity.ok(status);
     }
+
     
 }
