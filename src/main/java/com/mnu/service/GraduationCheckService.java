@@ -24,6 +24,7 @@ public class GraduationCheckService {
     private final StudentRepository studentRepo;
     private final PdfParserService pdfParserService;
 
+    
     public void parseGradePdfAndStore(String username, MultipartFile pdfFile) {
         Map<String, Object> parsed = pdfParserService.parsePdf(pdfFile);
         List<Map<String, String>> courses = (List<Map<String, String>>) parsed.get("courses");
@@ -72,6 +73,8 @@ public class GraduationCheckService {
                         row -> (String) row[0],
                         row -> ((Number) row[1]).intValue()
                 ));
+        
+        statusDto.setEtcCredits(creditMap.getOrDefault("기타", 0));
 
         // [2] 졸업 요건 (입학년도 기준)
         List<GraduationRequirement> requirements = gradReqRepo.findByMajorAndAdmissionYear(major, year);
@@ -80,6 +83,7 @@ public class GraduationCheckService {
                         GraduationRequirement::getCategory,
                         GraduationRequirement::getRequiredCredits
                 ));
+        statusDto.setRequiredEtcCredits(requiredMap.getOrDefault("기타", 0)); // ✅ 여기로 옮기기
 
         // [3] 전공필수 미이수 과목
         List<Course> missingCourses = courseRepo.findUncompletedRequired(studentId);
@@ -200,6 +204,8 @@ public class GraduationCheckService {
                 statusDto.getEngineeringBasicsCredits() >= statusDto.getRequiredEngineeringBasicsCredits() &&
                 statusDto.getMajorRequiredCredits() >= statusDto.getRequiredMajorRequiredCredits() &&
                 statusDto.getMajorElectiveCredits() >= statusDto.getRequiredMajorElectiveCredits() &&
+                statusDto.getEtcCredits() >= statusDto.getRequiredEtcCredits() && 
+
                 statusDto.isNonCurricularOk() &&
                 (statusDto.getMissingRequiredCourses() == null || statusDto.getMissingRequiredCourses().isEmpty());
         statusDto.setGraduationAvailable(graduationOk);
@@ -221,6 +227,27 @@ public class GraduationCheckService {
 
         statusDto.setGraduationFailReasons(failReasons);
 
+        
+        // [10] 총 졸업 학점 및 취득 학점 요약
+        int totalRequired = statusDto.getRequiredGeneralEducationCredits()
+                + statusDto.getRequiredEngineeringBasicsCredits()
+                + statusDto.getRequiredMajorRequiredCredits()
+                + statusDto.getRequiredMajorElectiveCredits()
+                + statusDto.getRequiredEtcCredits(); 
+
+        int totalEarned = statusDto.getGeneralEducationCredits()
+                + statusDto.getEngineeringBasicsCredits()
+                + statusDto.getMajorRequiredCredits()
+                + statusDto.getMajorElectiveCredits()
+        		+ statusDto.getEtcCredits();  // 추가 ✅
+
+        statusDto.setTotalRequiredCredits(totalRequired);
+        statusDto.setTotalEarnedCredits(totalEarned);
+        statusDto.setTotalCreditsOk(totalEarned >= totalRequired);
+
+
+        
         return statusDto;
+        
     }
 }

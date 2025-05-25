@@ -68,6 +68,18 @@
                 <td th:text="${status.majorElectiveCredits}"></td>
                 <td th:text="${status.majorElectiveCredits >= status.requiredMajorElectiveCredits ? 'Y' : 'N'}"></td>
             </tr>
+            <tr>
+                <td>기타</td>
+                <td th:text="${status.requiredEtcCredits}"></td>
+                <td th:text="${status.etcCredits}"></td>
+                <td th:text="${status.etcCredits >= status.requiredEtcCredits ? 'Y' : 'N'}"></td>
+            </tr>
+	        <tr class="table-info fw-bold">
+	            <td>총합</td>
+	            <td th:text="${status.totalRequiredCredits}"></td>
+	            <td th:text="${status.totalEarnedCredits}"></td>
+	            <td th:text="${status.totalCreditsOk ? 'Y' : 'N'}"></td>
+	        </tr>
         </tbody>
     </table>
 </div>

@@ -73,7 +73,7 @@ public class UserController {
 
         return ResponseEntity.ok(Map.of(
             "message", "회원가입 완료 및 성적 분석 완료",
-            "redirectUrl", "/login"
+            "redirectUrl", "/graduation/status/" + username
         ));
     }
 

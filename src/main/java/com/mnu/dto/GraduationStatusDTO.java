@@ -41,7 +41,15 @@ public class GraduationStatusDTO {
     // 불합격 사유 목록
     private List<String> graduationFailReasons;
 
+    // 졸업 학점과 취득 학점
+    private int totalRequiredCredits;
+    private int totalEarnedCredits;
+    private boolean totalCreditsOk;
     
+    // 기타 학점
+    private int etcCredits;
+    private int requiredEtcCredits;
+
     // ======== 내부 클래스 ========
     public List<String> getGraduationFailReasons() {
         return graduationFailReasons;
@@ -194,5 +202,45 @@ public class GraduationStatusDTO {
 
     public double getAverageGrade() { return averageGrade; }
     public void setAverageGrade(double averageGrade) { this.averageGrade = averageGrade; }
+
+    public int getTotalRequiredCredits() {
+        return totalRequiredCredits;
+    }
+
+    public void setTotalRequiredCredits(int totalRequiredCredits) {
+        this.totalRequiredCredits = totalRequiredCredits;
+    }
+
+    public int getTotalEarnedCredits() {
+        return totalEarnedCredits;
+    }
+
+    public void setTotalEarnedCredits(int totalEarnedCredits) {
+        this.totalEarnedCredits = totalEarnedCredits;
+    }
+
+    public boolean isTotalCreditsOk() {
+        return totalCreditsOk;
+    }
+
+    public void setTotalCreditsOk(boolean totalCreditsOk) {
+        this.totalCreditsOk = totalCreditsOk;
+    }
+
+    public int getEtcCredits() {
+        return etcCredits;
+    }
+
+    public void setEtcCredits(int etcCredits) {
+        this.etcCredits = etcCredits;
+    }
+
+    public int getRequiredEtcCredits() {
+        return requiredEtcCredits;
+    }
+
+    public void setRequiredEtcCredits(int requiredEtcCredits) {
+        this.requiredEtcCredits = requiredEtcCredits;
+    }
 
 }
