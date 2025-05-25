@@ -4,7 +4,13 @@ import java.util.List;
 import java.util.Map;
 
 public class GraduationStatusDTO {
-
+	
+	// ===== 상단 정보 필드 추가 =====
+	private String studentId;
+	private String major;
+	private int admissionYear;
+	private double averageGrade;  // 평점 (4.5 기준)
+	
     // 이수 학점
     private int generalEducationCredits;
     private int engineeringBasicsCredits;
@@ -29,7 +35,23 @@ public class GraduationStatusDTO {
     // 학기별 이수 과목 목록
     private Map<String, List<TakenCourseDTO>> takenBySemester;
 
+    // 졸업 가능 여부 (모든 조건 충족 시 true)
+    private boolean graduationAvailable;
+    
+    // 불합격 사유 목록
+    private List<String> graduationFailReasons;
+
+    
     // ======== 내부 클래스 ========
+    public List<String> getGraduationFailReasons() {
+        return graduationFailReasons;
+    }
+
+    public void setGraduationFailReasons(List<String> graduationFailReasons) {
+        this.graduationFailReasons = graduationFailReasons;
+    }
+
+
 
     public static class CourseDTO {
         private String courseCode;
@@ -152,4 +174,25 @@ public class GraduationStatusDTO {
     public void setTakenBySemester(Map<String, List<TakenCourseDTO>> takenBySemester) {
         this.takenBySemester = takenBySemester;
     }
+    // Getter & Setter
+    public boolean isGraduationAvailable() {
+        return graduationAvailable;
+    }
+
+    public void setGraduationAvailable(boolean graduationAvailable) {
+        this.graduationAvailable = graduationAvailable;
+    }
+ // ===== Getter/Setter 추가 =====
+    public String getStudentId() { return studentId; }
+    public void setStudentId(String studentId) { this.studentId = studentId; }
+
+    public String getMajor() { return major; }
+    public void setMajor(String major) { this.major = major; }
+
+    public int getAdmissionYear() { return admissionYear; }
+    public void setAdmissionYear(int admissionYear) { this.admissionYear = admissionYear; }
+
+    public double getAverageGrade() { return averageGrade; }
+    public void setAverageGrade(double averageGrade) { this.averageGrade = averageGrade; }
+
 }

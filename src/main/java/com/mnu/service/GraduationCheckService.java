@@ -1,77 +1,48 @@
 package com.mnu.service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-
-import com.mnu.entity.Course;
-import com.mnu.entity.GraduationRequirement;
-import com.mnu.entity.Student;
-import com.mnu.entity.TakenCourse;
-import com.mnu.repository.CourseRepository;
-import com.mnu.repository.GraduationRequirementRepository;
-import com.mnu.repository.NonCurricularProgramRepository;
-import com.mnu.repository.StudentProgramRepository;
-import com.mnu.repository.StudentRepository;
-import com.mnu.repository.TakenCourseRepository;
-import com.mnu.repository.UserRepository;
-
-import lombok.RequiredArgsConstructor;
-
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-
-import com.mnu.entity.User;
-import com.mnu.dto.CategoryCreditsDTO;
 import com.mnu.dto.GraduationStatusDTO;
 import com.mnu.dto.TakenCourseDTO;
-import com.mnu.dto.GraduationStatusDTO;
+import com.mnu.entity.*;
+import com.mnu.repository.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class GraduationCheckService {
-	
-	private final UserRepository userRepository;
+
+    private final UserRepository userRepository;
     private final TakenCourseRepository takenCourseRepo;
     private final CourseRepository courseRepo;
     private final GraduationRequirementRepository gradReqRepo;
     private final StudentProgramRepository studentProgramRepo;
     private final NonCurricularProgramRepository nonCurricularRepo;
     private final StudentRepository studentRepo;
-    private final PdfParserService pdfParserService; // 추가 필요
+    private final PdfParserService pdfParserService;
 
     public void parseGradePdfAndStore(String username, MultipartFile pdfFile) {
         Map<String, Object> parsed = pdfParserService.parsePdf(pdfFile);
         List<Map<String, String>> courses = (List<Map<String, String>>) parsed.get("courses");
 
-        // 1. 학생 조회 or 생성
         Optional<User> userOpt = userRepository.findByUsername(username);
         if (userOpt.isEmpty()) return;
 
         String studentId = username;
 
-        Student student = studentRepo.findById(studentId)
-            .orElseGet(() -> {
-                // 기본값 생성 (email, major는 null 허용됨에 주의)
-                Student newStudent = new Student();
-                newStudent.setStudentId(studentId);
-                newStudent.setPassword("default"); // 또는 userOpt.get().getPassword()
-                newStudent.setMajor(userOpt.get().getMajor());
-                newStudent.setEmail(userOpt.get().getEmail());
-                newStudent.setAdmissionYear(2024); // 또는 파싱 값
-                return studentRepo.save(newStudent);
-            });
+        Student student = studentRepo.findById(studentId).orElseGet(() -> {
+            Student newStudent = new Student();
+            newStudent.setStudentId(studentId);
+            newStudent.setPassword("default");
+            newStudent.setMajor(userOpt.get().getMajor());
+            newStudent.setEmail(userOpt.get().getEmail());
+            newStudent.setAdmissionYear(2024); // TODO: PDF에서 자동 추출 예정
+            return studentRepo.save(newStudent);
+        });
 
-
-        // 2. 이수 과목 저장
         for (Map<String, String> course : courses) {
             String courseCode = course.get("courseCode");
             String grade = course.get("grade");
@@ -80,24 +51,21 @@ public class GraduationCheckService {
             TakenCourse tc = new TakenCourse();
             tc.setStudentId(studentId);
             tc.setCourseCode(courseCode);
-            if (courseCode != null && grade != null && !grade.isBlank()) {
-                tc.setCompleted("Y");
-            } else {
-                tc.setCompleted("N"); // 혹은 continue;
-            }
             tc.setGrade(grade);
-            tc.setSemester(semester); // ✅ 추가
+            tc.setSemester(semester);
+            tc.setCompleted((courseCode != null && grade != null && !grade.isBlank()) ? "Y" : "N");
 
-            System.out.println("저장 중: " + courseCode + " / 성적: " + grade + " / 학기: " + semester);
             takenCourseRepo.save(tc);
         }
     }
+
     public GraduationStatusDTO checkStatus(String studentId) {
         Student student = studentRepo.findById(studentId).orElseThrow();
         int year = student.getAdmissionYear();
         String major = student.getMajor();
+        GraduationStatusDTO statusDto = new GraduationStatusDTO();
 
-        // 1. 영역별 이수 학점
+        // [1] 학점 취득 현황
         List<Object[]> creditSums = takenCourseRepo.sumCreditsByCategory(studentId);
         Map<String, Integer> creditMap = creditSums.stream()
                 .collect(Collectors.toMap(
@@ -105,7 +73,7 @@ public class GraduationCheckService {
                         row -> ((Number) row[1]).intValue()
                 ));
 
-        // 2. 입학년도별 요구 학점
+        // [2] 졸업 요건 (입학년도 기준)
         List<GraduationRequirement> requirements = gradReqRepo.findByMajorAndAdmissionYear(major, year);
         Map<String, Integer> requiredMap = requirements.stream()
                 .collect(Collectors.toMap(
@@ -113,56 +81,8 @@ public class GraduationCheckService {
                         GraduationRequirement::getRequiredCredits
                 ));
 
-        // 3. 미이수 전공필수 과목
+        // [3] 전공필수 미이수 과목
         List<Course> missingCourses = courseRepo.findUncompletedRequired(studentId);
-
-        // 4. 비교과 프로그램 이수 현황
-        List<Object[]> programStatus = nonCurricularRepo.checkProgramStatus(studentId);
-        List<GraduationStatusDTO.NonCurricularStatus> programDTOs = new ArrayList<>();
-        boolean allProgramsCompleted = true;
-
-        for (Object[] row : programStatus) {
-            String name = (String) row[0];
-            String completed = (String) row[1];
-            boolean isDone = "Y".equalsIgnoreCase(completed);
-            if (!isDone) allProgramsCompleted = false;
-
-            GraduationStatusDTO.NonCurricularStatus dto = new GraduationStatusDTO.NonCurricularStatus();
-            dto.setProgramName(name);
-            dto.setCompleted(isDone);
-            programDTOs.add(dto);
-        }
-
-        // 5. 학기별 이수 과목
-        List<TakenCourse> takenCourses = takenCourseRepo.findByStudentId(studentId);
-        Map<String, List<TakenCourseDTO>> takenBySemester = new HashMap<>();
-
-        for (TakenCourse tc : takenCourses) {
-            Course course = courseRepo.findById(tc.getCourseCode()).orElse(null);
-            if (course == null) continue;
-
-            String semester = tc.getSemester() != null ? tc.getSemester() : "미분류";
-            TakenCourseDTO dto = new TakenCourseDTO();
-            dto.setCourseCode(tc.getCourseCode());
-            dto.setCourseName(course.getCourseName());
-            dto.setGrade(tc.getGrade());
-
-            takenBySemester.computeIfAbsent(semester, k -> new ArrayList<>()).add(dto);
-        }
-
-        // 6. DTO 구성
-        GraduationStatusDTO dto = new GraduationStatusDTO();
-        dto.setGeneralEducationCredits(creditMap.getOrDefault("전문교양", 0));
-        dto.setEngineeringBasicsCredits(creditMap.getOrDefault("공학기초", 0));
-        dto.setMajorRequiredCredits(creditMap.getOrDefault("전공필수", 0));
-        dto.setMajorElectiveCredits(creditMap.getOrDefault("전공선택", 0));
-
-        dto.setRequiredGeneralEducationCredits(requiredMap.getOrDefault("전문교양", 0));
-        dto.setRequiredEngineeringBasicsCredits(requiredMap.getOrDefault("공학기초", 0));
-        dto.setRequiredMajorRequiredCredits(requiredMap.getOrDefault("전공필수", 0));
-        dto.setRequiredMajorElectiveCredits(requiredMap.getOrDefault("전공선택", 0));
-
-        // 미이수 전공필수 과목
         List<GraduationStatusDTO.CourseDTO> missingList = missingCourses.stream()
                 .map(c -> {
                     GraduationStatusDTO.CourseDTO cdto = new GraduationStatusDTO.CourseDTO();
@@ -172,12 +92,135 @@ public class GraduationCheckService {
                 })
                 .collect(Collectors.toList());
 
-        dto.setMissingRequiredCourses(missingList);
-        dto.setNonCurricularPrograms(programDTOs);
-        dto.setNonCurricularOk(allProgramsCompleted);
-        dto.setTakenBySemester(takenBySemester);
+        // [4] 비교과 이수 현황
+        List<Object[]> programStatus = nonCurricularRepo.checkProgramStatus(studentId);
+        List<GraduationStatusDTO.NonCurricularStatus> programDTOs = new ArrayList<>();
+        boolean allProgramsCompleted = true;
+        for (Object[] row : programStatus) {
+            String name = (String) row[0];
+            String completed = (String) row[1];
+            boolean isDone = "Y".equalsIgnoreCase(completed);
+            if (!isDone) allProgramsCompleted = false;
 
-        return dto;
+            GraduationStatusDTO.NonCurricularStatus programDto = new GraduationStatusDTO.NonCurricularStatus();
+            programDto.setProgramName(name);
+            programDto.setCompleted(isDone);
+            programDTOs.add(programDto);
+        }
+
+        // [5] 학기별 이수 과목
+        List<TakenCourse> takenCourses = takenCourseRepo.findByStudentId(studentId);
+        Map<String, List<TakenCourseDTO>> takenBySemester = new LinkedHashMap<>();
+
+	     // 먼저 학기 문자열 정렬을 위해 TreeSet 사용
+	     Set<String> sortedSemesterSet = takenCourses.stream()
+	         .map(tc -> tc.getSemester() == null ? "미분류" : tc.getSemester())
+	         .distinct()
+	         .sorted(Comparator.comparing(s -> s.replace("학기", "").replace("/", ".")
+	             .replace("1", ".0").replace("2", ".5"))) // 예: 2024/1학기 → 2024.0
+	         .collect(Collectors.toCollection(LinkedHashSet::new));
+	
+	     for (String sem : sortedSemesterSet) {
+	         takenBySemester.put(sem, new ArrayList<>());
+	     }
+	
+	     for (TakenCourse tc : takenCourses) {
+	         Course course = courseRepo.findById(tc.getCourseCode()).orElse(null);
+	         if (course == null) continue;
+	
+	         String semester = tc.getSemester() != null ? tc.getSemester() : "미분류";
+	         TakenCourseDTO dto = new TakenCourseDTO();
+	         dto.setCourseCode(tc.getCourseCode());
+	         dto.setCourseName(course.getCourseName());
+	         dto.setGrade(tc.getGrade());
+	
+	         takenBySemester.get(semester).add(dto);
+	     }
+
+
+        // [6] 평균 평점 계산
+        double totalScore = 0;
+        int subjectCount = 0;
+        for (TakenCourse tc : takenCourses) {
+            if (!"Y".equals(tc.getCompleted())) continue;
+            String grade = tc.getGrade();
+            if (grade == null || grade.isBlank()) continue;
+
+            switch (grade) {
+            case "A+":
+                totalScore += 4.5; break;
+            case "A0":
+                totalScore += 4.0; break;
+            case "B+":
+                totalScore += 3.5; break;
+            case "B0":
+                totalScore += 3.0; break;
+            case "C+":
+                totalScore += 2.5; break;
+            case "C0":
+                totalScore += 2.0; break;
+            case "D+":
+                totalScore += 1.5; break;
+            case "D0":
+                totalScore += 1.0; break;
+            case "F":
+                totalScore += 0.0; break;
+            default:
+                continue; 
+        }
+        subjectCount++;
+
+        }
+        double avgGrade = subjectCount == 0 ? 0.0 : totalScore / subjectCount;
+
+        // [7] DTO 구성
+        statusDto.setStudentId(studentId);
+        statusDto.setMajor(major);
+        statusDto.setAdmissionYear(year);
+        statusDto.setAverageGrade(Math.round(avgGrade * 100.0) / 100.0);
+
+        statusDto.setGeneralEducationCredits(creditMap.getOrDefault("전문교양", 0));
+        statusDto.setEngineeringBasicsCredits(creditMap.getOrDefault("공학기초", 0));
+        statusDto.setMajorRequiredCredits(creditMap.getOrDefault("전공필수", 0));
+        statusDto.setMajorElectiveCredits(creditMap.getOrDefault("전공선택", 0));
+
+        statusDto.setRequiredGeneralEducationCredits(requiredMap.getOrDefault("전문교양", 0));
+        statusDto.setRequiredEngineeringBasicsCredits(requiredMap.getOrDefault("공학기초", 0));
+        statusDto.setRequiredMajorRequiredCredits(requiredMap.getOrDefault("전공필수", 0));
+        statusDto.setRequiredMajorElectiveCredits(requiredMap.getOrDefault("전공선택", 0));
+
+        statusDto.setMissingRequiredCourses(missingList);
+        statusDto.setNonCurricularPrograms(programDTOs);
+        statusDto.setNonCurricularOk(allProgramsCompleted);
+        statusDto.setTakenBySemester(takenBySemester);
+
+        // [8] 졸업 가능 여부 판정
+        boolean graduationOk =
+                statusDto.getGeneralEducationCredits() >= statusDto.getRequiredGeneralEducationCredits() &&
+                statusDto.getEngineeringBasicsCredits() >= statusDto.getRequiredEngineeringBasicsCredits() &&
+                statusDto.getMajorRequiredCredits() >= statusDto.getRequiredMajorRequiredCredits() &&
+                statusDto.getMajorElectiveCredits() >= statusDto.getRequiredMajorElectiveCredits() &&
+                statusDto.isNonCurricularOk() &&
+                (statusDto.getMissingRequiredCourses() == null || statusDto.getMissingRequiredCourses().isEmpty());
+        statusDto.setGraduationAvailable(graduationOk);
+
+        // [9] 졸업 불가 사유 수집
+        List<String> failReasons = new ArrayList<>();
+        if (statusDto.getGeneralEducationCredits() < statusDto.getRequiredGeneralEducationCredits())
+            failReasons.add("전문교양 학점 부족");
+        if (statusDto.getEngineeringBasicsCredits() < statusDto.getRequiredEngineeringBasicsCredits())
+            failReasons.add("공학기초 학점 부족");
+        if (statusDto.getMajorRequiredCredits() < statusDto.getRequiredMajorRequiredCredits())
+            failReasons.add("전공필수 학점 부족");
+        if (statusDto.getMajorElectiveCredits() < statusDto.getRequiredMajorElectiveCredits())
+            failReasons.add("전공선택 학점 부족");
+        if (!statusDto.isNonCurricularOk())
+            failReasons.add("비교과 프로그램 미이수");
+        if (statusDto.getMissingRequiredCourses() != null && !statusDto.getMissingRequiredCourses().isEmpty())
+            failReasons.add("전공필수 과목 일부 미이수");
+
+        statusDto.setGraduationFailReasons(failReasons);
+
+        return statusDto;
     }
-    
 }

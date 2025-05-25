@@ -2,108 +2,138 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>🎓 졸업사정표</title>
-    <style>
-        table {
-            width: 80%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-        }
-        th, td {
-            border: 1px solid #aaa;
-            padding: 10px;
-            text-align: center;
-        }
-        th {
-            background-color: #f0f0f0;
-        }
-        .highlight {
-            background-color: #e0f7fa;
-            font-weight: bold;
-        }
-    </style>
+    <title>졸업 시뮬레이션 시스템</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="p-4">
 
-<h1>🎓 졸업사정표</h1>
+<h2 class="mb-4">🎓 졸업 시뮬레이션 시스템</h2>
 
-<!-- ✅ 1. 요건별 이수 여부 테이블 -->
-<table>
-    <tr>
-        <th>구분</th>
-        <th>배정</th>
-        <th>취득</th>
-        <th>이수</th>
-    </tr>
-    <tr>
-        <td>전문교양</td>
-        <td th:text="${status.requiredGeneralEducationCredits}">18</td>
-        <td th:text="${status.generalEducationCredits}">9</td>
-        <td th:text="${status.generalEducationCredits >= status.requiredGeneralEducationCredits ? 'Y' : 'N'}"></td>
-    </tr>
-    <tr>
-        <td>공학기초</td>
-        <td th:text="${status.requiredEngineeringBasicsCredits}">33</td>
-        <td th:text="${status.engineeringBasicsCredits}">36</td>
-        <td th:text="${status.engineeringBasicsCredits >= status.requiredEngineeringBasicsCredits ? 'Y' : 'N'}"></td>
-    </tr>
-    <tr>
-        <td>전공필수</td>
-        <td th:text="${status.requiredMajorRequiredCredits}">45</td>
-        <td th:text="${status.majorRequiredCredits}">21</td>
-        <td th:text="${#lists.isEmpty(status.missingRequiredCourses) ? 'Y' : 'N'}"></td>
-    </tr>
-    <tr>
-        <td>전공선택</td>
-        <td th:text="${status.requiredMajorElectiveCredits}">45</td>
-        <td th:text="${status.majorElectiveCredits}">15</td>
-        <td th:text="${status.majorElectiveCredits >= status.requiredMajorElectiveCredits ? 'Y' : 'N'}"></td>
-    </tr>
-    <tr>
-        <td class="highlight">비교과 이수</td>
-        <td colspan="2">-</td>
-        <td th:text="${status.nonCurricularOk ? 'Y' : 'N'}"></td>
-    </tr>
-</table>
+<!-- ✅ 기본정보 -->
+<div class="card mb-4">
+    <div class="card-header">학생 기본 정보</div>
+    <div class="card-body">
+        <p><strong>학번:</strong> <span th:text="${studentId}"></span></p>
+        <p><strong>전공:</strong> <span th:text="${status.major}"></span></p>
+        <p><strong>입학년도:</strong> <span th:text="${status.admissionYear}"></span></p>
+        <p><strong>졸업 가능 여부:</strong> 
+            <span th:text="${status.graduationAvailable ? '가능 ✔' : '불가 ❌'}" 
+                  th:classappend="${status.graduationAvailable ? 'text-success' : 'text-danger'}"></span>
+        </p>
+        <p><strong>평균 학점:</strong>
+            <span th:text="${status.averageGrade} + ' / 4.5'"></span>
+        </p>
 
-<!-- ✅ 2. 미이수 전공필수 목록 -->
-<h2>❗ 미이수 전공필수 과목 목록</h2>
-<div th:if="${#lists.isEmpty(status.missingRequiredCourses)}">없음</div>
-<ul th:unless="${#lists.isEmpty(status.missingRequiredCourses)}">
-    <li th:each="course : ${status.missingRequiredCourses}"
-        th:text="${course.courseName + ' (' + course.courseCode + ')'}"></li>
-</ul>
+        <div th:if="${!status.graduationAvailable}" class="mt-2">
+            <p><strong class="text-danger">불가 사유:</strong></p>
+            <ul>
+                <li th:each="reason : ${status.graduationFailReasons}" th:text="${reason}"></li>
+            </ul>
+        </div>
+    </div>
+</div>
 
-<!-- ✅ 3. 비교과 프로그램 이수 현황 -->
-<h2>🎯 비교과 프로그램 이수 현황</h2>
-<table>
-    <tr>
-        <th>프로그램명</th>
-        <th>이수</th>
-    </tr>
-    <tr th:each="program : ${status.nonCurricularPrograms}">
-        <td th:text="${program.programName}"></td>
-        <td th:text="${program.completed ? 'Y' : 'N'}"></td>
-    </tr>
-</table>
 
-<!-- ✅ 4. 학기별 이수과목 -->
-<h2>🗓️ 학기별 이수 과목</h2>
-<div th:each="entry : ${status.takenBySemester}">
-    <h3 th:text="${entry.key}">학기</h3>
-    <table>
-        <tr>
-            <th>과목코드</th>
-            <th>과목명</th>
-            <th>성적</th>
-        </tr>
-        <tr th:each="course : ${entry.value}">
-            <td th:text="${course.courseCode}"></td>
-            <td th:text="${course.courseName}"></td>
-            <td th:text="${course.grade}"></td>
-        </tr>
+<!-- ✅ 영역별 학점 요약 -->
+<div class="card mb-4">
+    <div class="card-header">📊 졸업 요건 학점 요약</div>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>구분</th><th>배정</th><th>취득</th><th>이수</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>전문교양</td>
+                <td th:text="${status.requiredGeneralEducationCredits}"></td>
+                <td th:text="${status.generalEducationCredits}"></td>
+                <td th:text="${status.generalEducationCredits >= status.requiredGeneralEducationCredits ? 'Y' : 'N'}"></td>
+            </tr>
+            <tr>
+                <td>공학기초</td>
+                <td th:text="${status.requiredEngineeringBasicsCredits}"></td>
+                <td th:text="${status.engineeringBasicsCredits}"></td>
+                <td th:text="${status.engineeringBasicsCredits >= status.requiredEngineeringBasicsCredits ? 'Y' : 'N'}"></td>
+            </tr>
+            <tr>
+                <td>전공필수</td>
+                <td th:text="${status.requiredMajorRequiredCredits}"></td>
+                <td th:text="${status.majorRequiredCredits}"></td>
+                <td th:text="${#lists.isEmpty(status.missingRequiredCourses) ? 'Y' : 'N'}"></td>
+            </tr>
+            <tr>
+                <td>전공선택</td>
+                <td th:text="${status.requiredMajorElectiveCredits}"></td>
+                <td th:text="${status.majorElectiveCredits}"></td>
+                <td th:text="${status.majorElectiveCredits >= status.requiredMajorElectiveCredits ? 'Y' : 'N'}"></td>
+            </tr>
+        </tbody>
     </table>
 </div>
 
+<!-- ✅ 미이수 전공필수 과목 -->
+<div class="card mb-4">
+    <div class="card-header">❗ 미이수 전공필수 과목</div>
+    <div class="card-body">
+        <div th:if="${#lists.isEmpty(status.missingRequiredCourses)}">없음</div>
+        <ul th:unless="${#lists.isEmpty(status.missingRequiredCourses)}">
+            <li th:each="c : ${status.missingRequiredCourses}"
+                th:text="${c.courseName + ' (' + c.courseCode + ')'}"></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ✅ 비교과 프로그램 -->
+<div class="card mb-4">
+    <div class="card-header">🎯 비교과 이수 현황</div>
+    <table class="table table-striped">
+        <thead><tr><th>항목</th><th>이수</th></tr></thead>
+        <tbody>
+            <tr th:each="p : ${status.nonCurricularPrograms}">
+                <td th:text="${p.programName}"></td>
+                <td th:text="${p.completed ? 'Y' : 'N'}" 
+                    th:classappend="${p.completed ? 'text-success' : 'text-danger'}"></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ✅ 학기별 이수 과목 (접기/펼치기) -->
+<div th:each="entry, iterStat : ${status.takenBySemester}" class="mb-3">
+    <div class="card">
+        <div class="card-header">
+            <a href="#" 
+               class="text-decoration-none fw-bold"
+               data-bs-toggle="collapse" 
+               th:href="'#collapse' + ${iterStat.index}" 
+               th:text="${entry.key + ' 이수 과목'}"></a>
+        </div>
+        <div class="collapse" th:id="'collapse' + ${iterStat.index}">
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>과목코드</th>
+                            <th>과목명</th>
+                            <th>성적</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="course : ${entry.value}">
+                            <td th:text="${course.courseCode}"></td>
+                            <td th:text="${course.courseName}"></td>
+                            <td th:text="${course.grade}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 </body>
+<!-- Bootstrap JS (반드시 body 맨 아래에 추가!) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </html>
