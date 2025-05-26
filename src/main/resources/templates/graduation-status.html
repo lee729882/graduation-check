@@ -96,6 +96,19 @@
     </div>
 </div>
 
+<!-- ✅ 미이수 전문교양 과목 -->
+<div class="card mb-4">
+    <div class="card-header">❗ 미이수 전문교양 과목</div>
+    <div class="card-body">
+        <div th:if="${#lists.isEmpty(status.missingGeneralEducationCourses)}">없음</div>
+        <ul th:unless="${#lists.isEmpty(status.missingGeneralEducationCourses)}">
+            <li th:each="c : ${status.missingGeneralEducationCourses}"
+                th:text="${c.courseName + ' (' + c.courseCode + ')'}"></li>
+        </ul>
+    </div>
+</div>
+
+
 <!-- ✅ 비교과 프로그램 -->
 <div class="card mb-4">
     <div class="card-header">🎯 비교과 이수 현황</div>

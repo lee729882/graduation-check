@@ -49,6 +49,9 @@ public class GraduationStatusDTO {
     // 기타 학점
     private int etcCredits;
     private int requiredEtcCredits;
+    
+    // 미이수 전문 교양
+    private List<CourseDTO> missingGeneralEducationCourses;
 
     // ======== 내부 클래스 ========
     public List<String> getGraduationFailReasons() {
@@ -242,5 +245,13 @@ public class GraduationStatusDTO {
     public void setRequiredEtcCredits(int requiredEtcCredits) {
         this.requiredEtcCredits = requiredEtcCredits;
     }
+    public List<CourseDTO> getMissingGeneralEducationCourses() {
+        return missingGeneralEducationCourses;
+    }
+
+    public void setMissingGeneralEducationCourses(List<CourseDTO> missingGeneralEducationCourses) {
+        this.missingGeneralEducationCourses = missingGeneralEducationCourses;
+    }
+
 
 }

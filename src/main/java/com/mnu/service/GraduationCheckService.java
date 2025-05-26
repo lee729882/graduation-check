@@ -95,7 +95,20 @@ public class GraduationCheckService {
                     return cdto;
                 })
                 .collect(Collectors.toList());
+        // [3-1] 전문교양 미이수 과목
+        List<Course> missingGeneralEducation = courseRepo.findUncompletedGeneralEducation(studentId);
+        List<GraduationStatusDTO.CourseDTO> missingGenList = missingGeneralEducation.stream()
+                .map(c -> {
+                    GraduationStatusDTO.CourseDTO dto = new GraduationStatusDTO.CourseDTO();
+                    dto.setCourseCode(c.getCourseCode());
+                    dto.setCourseName(c.getCourseName());
+                    return dto;
+                })
+                .collect(Collectors.toList());
 
+        statusDto.setMissingGeneralEducationCourses(missingGenList);
+
+        
         // [4] 비교과 이수 현황
         List<Object[]> programStatus = nonCurricularRepo.checkProgramStatus(studentId);
         List<GraduationStatusDTO.NonCurricularStatus> programDTOs = new ArrayList<>();
@@ -224,6 +237,8 @@ public class GraduationCheckService {
             failReasons.add("비교과 프로그램 미이수");
         if (statusDto.getMissingRequiredCourses() != null && !statusDto.getMissingRequiredCourses().isEmpty())
             failReasons.add("전공필수 과목 일부 미이수");
+        if (statusDto.getMissingGeneralEducationCourses() != null && !statusDto.getMissingGeneralEducationCourses().isEmpty())
+            failReasons.add("전문교양 과목 일부 미이수");
 
         statusDto.setGraduationFailReasons(failReasons);
 
